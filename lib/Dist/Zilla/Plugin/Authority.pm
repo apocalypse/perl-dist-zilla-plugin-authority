@@ -20,14 +20,12 @@ with(
 {
 	use Moose::Util::TypeConstraints 1.01;
 
-	subtype 'authority'
-		=> as 'Str',
-		=> where { $_ =~ /^\w+\:\w+$/ },
-		=> message { "Authority must be in the form of 'cpan:PAUSEID'." };
-
 	has authority => (
 		is => 'ro',
-		isa => 'authority',
+		isa => subtype( 'Str'
+			=> where { $_ =~ /^\w+\:\w+$/ }
+			=> message { "Authority must be in the form of 'cpan:PAUSEID'." }
+		),
 		required => 1,
 	);
 
@@ -88,6 +86,7 @@ sub _munge_perl {
 	for my $stmt ( @$package_stmts ) {
 		my $package = $stmt->namespace;
 
+		# Same \x20 hack as seen in PkgVersion, blarh!
 		my $perl = "BEGIN {\n  \$$package\::AUTHORITY\x20=\x20'" . $self->authority . "';\n}\n";
 		my $doc = PPI::Document->new( \$perl );
 		my @children = $doc->schildren;
@@ -112,7 +111,7 @@ __PACKAGE__->meta->make_immutable;
 
 =pod
 
-=for stopwords AnnoCPAN CPAN CPANTS Kwalitee RT dist prereqs
+=for stopwords AnnoCPAN CPAN CPANTS Kwalitee RT dist prereqs RJBS metadata
 
 =head1 NAME
 
@@ -142,7 +141,7 @@ A boolean value to control if the authority should be added to the metadata. Def
 
 The metadata will look like this:
 
-	x_authority => 'cpan:APOCAL',
+	x_authority => 'cpan:APOCAL'
 
 =back
 
