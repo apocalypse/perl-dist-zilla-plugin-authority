@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<includepath>
+  <includepathentry path="${resource_loc:/perl-dist-zilla-plugin-authority/lib}" />
+</includepath>

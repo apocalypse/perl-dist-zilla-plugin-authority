@@ -1,0 +1,15 @@
+Build.PL
+MANIFEST
+MANIFEST.SKIP
+README
+Makefile.PL
+META.yml
+Changes
+LICENSE
+
+lib/Dist/Zilla/Plugin/Authority.pm
+
+examples/dist.ini
+
+t/1_load.t
+t/apocalypse.t
