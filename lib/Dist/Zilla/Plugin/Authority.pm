@@ -69,32 +69,35 @@ sub _munge_perl {
 	my( $self, $file ) = @_;
 
 	my $content = $file->content;
-
-	my $document = PPI::Document->new(\$content) or Carp::croak( PPI::Document->errstr );
+	my $document = PPI::Document->new( \$content ) or Carp::croak( PPI::Document->errstr );
 
 	{
 		my $code_only = $document->clone;
 		$code_only->prune( "PPI::Token::$_" ) for qw( Comment Pod Quote Regexp );
 		if ( $code_only->serialize =~ /\$AUTHORITY\s*=/sm ) {
-			$self->log( sprintf( 'skipping %s: assigns to $AUTHORITY', $file->name ) );
+			$self->log( [ 'skipping %s: assigns to $AUTHORITY', $file->name ] );
 			return;
 		}
 	}
 
 	return unless my $package_stmts = $document->find('PPI::Statement::Package');
 
+	my %seen_pkgs;
+
 	for my $stmt ( @$package_stmts ) {
 		my $package = $stmt->namespace;
+
+		if ( $seen_pkgs{ $package }++ ) {
+			$self->log( [ 'skipping package re-declaration for %s', $package ] );
+			next;
+		}
 
 		# Same \x20 hack as seen in PkgVersion, blarh!
 		my $perl = "BEGIN {\n  \$$package\::AUTHORITY\x20=\x20'" . $self->authority . "';\n}\n";
 		my $doc = PPI::Document->new( \$perl );
 		my @children = $doc->schildren;
 
-		$self->log_debug([
-			'adding $AUTHORITY assignment in %s',
-			$file->name,
-		]);
+		$self->log_debug( [ 'adding $AUTHORITY assignment in %s', $file->name ] );
 
 		Carp::carp( "error inserting AUTHORITY in " . $file->name )
 			unless $stmt->insert_after( $children[0]->clone )

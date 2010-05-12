@@ -1,5 +1,9 @@
 Revision history for Dist::Zilla::Plugin::Authority
 
+* 0.02
+
+	added the patch from Dist::Zilla::Plugin::PkgVer v2.101310 for multi-package declarations
+
 * 0.01
 
 	initial release
