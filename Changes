@@ -2,6 +2,9 @@ Revision history for Dist::Zilla::Plugin::Authority
 
 {{$NEXT}}
 
+1.000
+	Released: 2010-05-30 17:43:51 UTC
+
 	added the patch from Dave Rolsky for "monkeypatch package declaration" fix
 	Converted to Dist::Zilla for the release process!
 
