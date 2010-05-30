@@ -1,6 +1,6 @@
 package Dist::Zilla::Plugin::Authority;
-use strict; use warnings;
-our $VERSION = '0.01';
+
+# ABSTRACT: Add an $AUTHORITY to your packages
 
 use Moose 1.01;
 use PPI 1.206;
@@ -17,6 +17,14 @@ with(
 	},
 );
 
+=attr authority
+
+The authority you want to use. It should be something like C<cpan:APOCAL>.
+
+Required.
+
+=cut
+
 {
 	use Moose::Util::TypeConstraints 1.01;
 
@@ -31,6 +39,18 @@ with(
 
 	no Moose::Util::TypeConstraints;
 }
+
+=attr do_metadata
+
+A boolean value to control if the authority should be added to the metadata. ( META.yml or META.json )
+
+Defaults to false.
+
+The metadata will look like this:
+
+	x_authority => 'cpan:APOCAL'
+
+=cut
 
 has do_metadata => (
 	is => 'ro',
@@ -87,8 +107,15 @@ sub _munge_perl {
 	for my $stmt ( @$package_stmts ) {
 		my $package = $stmt->namespace;
 
+		# Thanks to rafl ( Florian Ragwitz ) for this
 		if ( $seen_pkgs{ $package }++ ) {
 			$self->log( [ 'skipping package re-declaration for %s', $package ] );
+			next;
+		}
+
+		# Thanks to autarch ( Dave Rolsky ) for this
+		if ( $stmt->content =~ /package\s*\n\s*\Q$package/ ) {
+			$self->log([ 'skipping package for %s, it looks like a monkey patch', $package ]);
 			next;
 		}
 
@@ -114,11 +141,9 @@ __PACKAGE__->meta->make_immutable;
 
 =pod
 
-=for stopwords AnnoCPAN CPAN CPANTS Kwalitee RT dist prereqs RJBS metadata
+=for stopwords RJBS json metadata yml
 
-=head1 NAME
-
-Dist::Zilla::Plugin::Authority - add an $AUTHORITY to your packages
+=for Pod::Coverage metadata munge_files
 
 =head1 DESCRIPTION
 
@@ -130,99 +155,24 @@ to the metadata, if requested.
 	authority = cpan:APOCAL
 	do_metadata = 1
 
-This plugin accepts the following options:
+The resulting hunk of code would look something like this:
 
-=over 4
+	BEGIN {
+	  $Dist::Zilla::Plugin::Authority::AUTHORITY = 'cpan:APOCAL';
+	}
 
-=item * authority
-
-The authority you want to use. It should be something like C<cpan:APOCAL>. Required.
-
-=item * do_metadata
-
-A boolean value to control if the authority should be added to the metadata. Defaults to false.
-
-The metadata will look like this:
-
-	x_authority => 'cpan:APOCAL'
-
-=back
+This code will be added to any package declarations in your perl files.
 
 =head1 SEE ALSO
 
 L<Dist::Zilla>
-
 L<http://www.perlmonks.org/?node_id=694377>
-
 L<http://perlcabal.org/syn/S11.html#Versioning>
 
-=head1 SUPPORT
-
-You can find documentation for this module with the perldoc command.
-
-	perldoc Dist::Zilla::Plugin::Authority
-
-=head2 Websites
-
-=over 4
-
-=item * Search CPAN
-
-L<http://search.cpan.org/dist/Dist-Zilla-Plugin-Authority>
-
-=item * AnnoCPAN: Annotated CPAN documentation
-
-L<http://annocpan.org/dist/Dist-Zilla-Plugin-Authority>
-
-=item * CPAN Ratings
-
-L<http://cpanratings.perl.org/d/Dist-Zilla-Plugin-Authority>
-
-=item * CPAN Forum
-
-L<http://cpanforum.com/dist/Dist-Zilla-Plugin-Authority>
-
-=item * RT: CPAN's Request Tracker
-
-L<http://rt.cpan.org/NoAuth/Bugs.html?Dist=Dist-Zilla-Plugin-Authority>
-
-=item * CPANTS Kwalitee
-
-L<http://cpants.perl.org/dist/overview/Dist-Zilla-Plugin-Authority>
-
-=item * CPAN Testers Results
-
-L<http://cpantesters.org/distro/D/Dist-Zilla-Plugin-Authority.html>
-
-=item * CPAN Testers Matrix
-
-L<http://matrix.cpantesters.org/?dist=Dist-Zilla-Plugin-Authority>
-
-=item * Git Source Code Repository
-
-L<http://github.com/apocalypse/perl-dist-zilla-plugin-authority>
-
-=back
-
-=head2 Bugs
-
-Please report any bugs or feature requests to C<bug-dist-zilla-plugin-authority at rt.cpan.org>, or through
-the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Dist-Zilla-Plugin-Authority>.  I will be
-notified, and then you'll automatically be notified of progress on your bug as I make changes.
-
-=head1 AUTHOR
-
-Apocalypse E<lt>apocal@cpan.orgE<gt>
+=head1 ACKNOWLEDGEMENTS
 
 This module is basically a rip-off of RJBS' excellent L<Dist::Zilla::Plugin::PkgVersion>, thanks!
 
-=head1 COPYRIGHT AND LICENSE
-
-Copyright 2010 by Apocalypse
-
-This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself.
-
-The full text of the license can be found in the LICENSE file included with this module.
+Props goes out to FLORA for prodding me to improve this module!
 
 =cut

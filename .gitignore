@@ -1,4 +1,1 @@
-LICENSE
-META.yml
-README
-Makefile.PL
+Dist-Zilla-Plugin-Authority-*
