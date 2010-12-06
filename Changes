@@ -8,10 +8,10 @@ Revision history for Dist::Zilla::Plugin::Authority
 	added the patch from Dave Rolsky for "monkeypatch package declaration" fix
 	Converted to Dist::Zilla for the release process!
 
-* 0.02
+0.02
 
 	added the patch from Dist::Zilla::Plugin::PkgVer v2.101310 for multi-package declarations
 
-* 0.01
+0.01
 
 	initial release
