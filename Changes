@@ -2,6 +2,11 @@ Revision history for Dist::Zilla::Plugin::Authority
 
 {{$NEXT}}
 
+	Updated to require Dist::Zilla v4 ( so we can access the %PAUSE stash )
+	The "authority" attr is not required anymore ( defaults to the %PAUSE username )
+	Backported some code from Dist::Zilla::Plugin::PkgVersion v4
+	Add $AUTHORITY to script files too
+
 1.000
 	Released: 2010-05-30 17:43:51 UTC
 

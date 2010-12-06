@@ -10,7 +10,7 @@ with(
 	'Dist::Zilla::Role::FileMunger' => { -version => '4.102345' },
 	'Dist::Zilla::Role::FileFinderUser' => {
 		-version => '4.102345',
-		default_finders => [ ':InstallModules' ],
+		default_finders => [ ':InstallModules', ':ExecFiles' ],
 	},
 );
 
@@ -18,7 +18,7 @@ with(
 
 The authority you want to use. It should be something like C<cpan:APOCAL>.
 
-Required.
+Defaults to the username set in the %PAUSE stash in the global config.ini or dist.ini ( Dist::Zilla v4 addition! )
 
 =cut
 
@@ -31,7 +31,17 @@ Required.
 			=> where { $_ =~ /^\w+\:\w+$/ }
 			=> message { "Authority must be in the form of 'cpan:PAUSEID'." }
 		),
-		required => 1,
+		lazy => 1,
+		default => sub {
+			my $self = shift;
+			my $stash = $self->zilla->stash_named( '%PAUSE' );
+			if ( ! defined $stash ) {
+				$self->log_fatal( 'PAUSE credentials not set in config.ini/dist.ini! Please set it or specify an authority for this plugin.' );
+			}
+
+			$self->log_debug( [ 'using PAUSE id %s for AUTHORITY', $stash->username ] );
+			return 'cpan:' . $stash->username;
+		},
 	);
 
 	no Moose::Util::TypeConstraints;
@@ -130,7 +140,6 @@ sub _munge_perl {
 
 	$file->content( $document->serialize );
 }
-
 
 no Moose;
 __PACKAGE__->meta->make_immutable;
