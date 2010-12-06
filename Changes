@@ -4,8 +4,9 @@ Revision history for Dist::Zilla::Plugin::Authority
 
 	Updated to require Dist::Zilla v4 ( so we can access the %PAUSE stash )
 	The "authority" attr is not required anymore ( defaults to the %PAUSE username )
-	Backported some code from Dist::Zilla::Plugin::PkgVersion v4
+	Backported some code from Dist::Zilla::Plugin::PkgVersion v4 ( as usual, thanks RJBS )
 	Add $AUTHORITY to script files too
+	Make do_metadata default to true ( thanks FLORA )
 
 1.000
 	Released: 2010-05-30 17:43:51 UTC

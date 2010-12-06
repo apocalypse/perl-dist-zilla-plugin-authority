@@ -51,7 +51,7 @@ Defaults to the username set in the %PAUSE stash in the global config.ini or dis
 
 A boolean value to control if the authority should be added to the metadata. ( META.yml or META.json )
 
-Defaults to false.
+Defaults to true.
 
 The metadata will look like this:
 
@@ -62,7 +62,7 @@ The metadata will look like this:
 has do_metadata => (
 	is => 'ro',
 	isa => 'Bool',
-	default => 0,
+	default => 1,
 );
 
 sub metadata {
