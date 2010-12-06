@@ -147,7 +147,7 @@ __PACKAGE__->meta->make_immutable;
 
 =pod
 
-=for stopwords RJBS json metadata yml
+=for stopwords RJBS metadata
 
 =for Pod::Coverage metadata munge_files
 
