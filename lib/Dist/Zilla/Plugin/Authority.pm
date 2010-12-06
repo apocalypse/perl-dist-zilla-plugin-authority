@@ -29,7 +29,7 @@ Defaults to the username set in the %PAUSE stash in the global config.ini or dis
 		is => 'ro',
 		isa => subtype( 'Str'
 			=> where { $_ =~ /^\w+\:\w+$/ }
-			=> message { "Authority must be in the form of 'cpan:PAUSEID'." }
+			=> message { "Authority must be in the form of 'cpan:PAUSEID'" }
 		),
 		lazy => 1,
 		default => sub {
@@ -39,7 +39,7 @@ Defaults to the username set in the %PAUSE stash in the global config.ini or dis
 				$self->log_fatal( 'PAUSE credentials not set in config.ini/dist.ini! Please set it or specify an authority for this plugin.' );
 			}
 
-			$self->log_debug( [ 'using PAUSE id %s for AUTHORITY', $stash->username ] );
+			$self->log_debug( [ 'using PAUSE id "%s" for AUTHORITY', $stash->username ] );
 			return 'cpan:' . $stash->username;
 		},
 	);
@@ -147,7 +147,7 @@ __PACKAGE__->meta->make_immutable;
 
 =pod
 
-=for stopwords RJBS metadata
+=for stopwords RJBS metadata FLORA
 
 =for Pod::Coverage metadata munge_files
 
