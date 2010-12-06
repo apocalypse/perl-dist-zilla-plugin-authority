@@ -2,17 +2,14 @@ package Dist::Zilla::Plugin::Authority;
 
 # ABSTRACT: Add an $AUTHORITY to your packages
 
-use Moose 1.01;
+use Moose 1.03;
 use PPI 1.206;
 
-# TODO wait for improved Moose that allows "with 'Foo::Bar' => { -version => 1.23 };"
-use Dist::Zilla::Role::MetaProvider 2.101170;
-use Dist::Zilla::Role::FileMunger 2.101170;
-use Dist::Zilla::Role::FileFinderUser 2.101170;
 with(
-	'Dist::Zilla::Role::MetaProvider',
-	'Dist::Zilla::Role::FileMunger',
+	'Dist::Zilla::Role::MetaProvider' => { -version => '4.102345' },
+	'Dist::Zilla::Role::FileMunger' => { -version => '4.102345' },
 	'Dist::Zilla::Role::FileFinderUser' => {
+		-version => '4.102345',
 		default_finders => [ ':InstallModules' ],
 	},
 );
@@ -114,8 +111,8 @@ sub _munge_perl {
 		}
 
 		# Thanks to autarch ( Dave Rolsky ) for this
-		if ( $stmt->content =~ /package\s*\n\s*\Q$package/ ) {
-			$self->log([ 'skipping package for %s, it looks like a monkey patch', $package ]);
+		if ( $stmt->content =~ /package\s*(?:#.*)?\n\s*\Q$package/ ) {
+			$self->log([ 'skipping private package %s', $package ]);
 			next;
 		}
 
@@ -124,7 +121,7 @@ sub _munge_perl {
 		my $doc = PPI::Document->new( \$perl );
 		my @children = $doc->schildren;
 
-		$self->log_debug( [ 'adding $AUTHORITY assignment in %s', $file->name ] );
+		$self->log_debug( [ 'adding $AUTHORITY assignment to %s in %s', $package, $file->name ] );
 
 		Carp::carp( "error inserting AUTHORITY in " . $file->name )
 			unless $stmt->insert_after( $children[0]->clone )
