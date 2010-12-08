@@ -147,7 +147,7 @@ __PACKAGE__->meta->make_immutable;
 
 =pod
 
-=for stopwords RJBS metadata FLORA
+=for :stopwords RJBS metadata FLORA dist ini json username yml
 
 =for Pod::Coverage metadata munge_files
 
