@@ -2,6 +2,8 @@ Revision history for Dist::Zilla::Plugin::Authority
 
 {{$NEXT}}
 
+	Added the "do_munging" attr to control the variable declarations in packages ( thanks FLORA )
+
 1.001
 	Released: 2010-12-08 02:36:12 UTC
 

@@ -53,13 +53,23 @@ A boolean value to control if the authority should be added to the metadata. ( M
 
 Defaults to true.
 
-The metadata will look like this:
-
-	x_authority => 'cpan:APOCAL'
-
 =cut
 
 has do_metadata => (
+	is => 'ro',
+	isa => 'Bool',
+	default => 1,
+);
+
+=attr do_munging
+
+A boolean value to control if the $AUTHORITY variable should be added to the modules.
+
+Defaults to true.
+
+=cut
+
+has do_munging => (
 	is => 'ro',
 	isa => 'Bool',
 	default => 1,
@@ -79,6 +89,8 @@ sub metadata {
 
 sub munge_files {
 	my( $self ) = @_;
+
+	return if ! $self->do_munging;
 
 	$self->_munge_file( $_ ) for @{ $self->found_files };
 }
@@ -153,13 +165,12 @@ __PACKAGE__->meta->make_immutable;
 
 =head1 DESCRIPTION
 
-This plugin adds the $AUTHORITY marker to your packages. Also, it can add the authority information
-to the metadata, if requested.
+This plugin adds the authority data to your distribution. It adds the data to your modules and metadata. Normally it
+looks for the PAUSE author id in your L<Dist::Zilla> configuration. If you want to override it, please use the 'authority'
+attribute.
 
 	# In your dist.ini:
 	[Authority]
-	authority = cpan:APOCAL
-	do_metadata = 1
 
 The resulting hunk of code would look something like this:
 
@@ -168,6 +179,10 @@ The resulting hunk of code would look something like this:
 	}
 
 This code will be added to any package declarations in your perl files.
+
+If you requested for the metadata to be populated, it will have an entry looking like this:
+
+	x_authority => 'cpan:APOCAL'
 
 =head1 SEE ALSO
 
