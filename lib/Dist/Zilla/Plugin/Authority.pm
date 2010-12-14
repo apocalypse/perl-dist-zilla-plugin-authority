@@ -49,7 +49,7 @@ Defaults to the username set in the %PAUSE stash in the global config.ini or dis
 
 =attr do_metadata
 
-A boolean value to control if the authority should be added to the metadata. ( META.yml or META.json )
+A boolean value to control if the authority should be added to the metadata.
 
 Defaults to true.
 
@@ -98,7 +98,6 @@ sub munge_files {
 sub _munge_file {
 	my( $self, $file ) = @_;
 
-	return                           if $file->name    =~ /\.t$/i;
 	return $self->_munge_perl($file) if $file->name    =~ /\.(?:pm|pl)$/i;
 	return $self->_munge_perl($file) if $file->content =~ /^#!(?:.*)perl(?:$|\s)/;
 	return;
@@ -172,15 +171,13 @@ attribute.
 	# In your dist.ini:
 	[Authority]
 
-The resulting hunk of code would look something like this:
+This code will be added to any package declarations in your perl files:
 
 	BEGIN {
 	  $Dist::Zilla::Plugin::Authority::AUTHORITY = 'cpan:APOCAL';
 	}
 
-This code will be added to any package declarations in your perl files.
-
-If you requested for the metadata to be populated, it will have an entry looking like this:
+Your metadata ( META.yml or META.json ) will have an entry looking like this:
 
 	x_authority => 'cpan:APOCAL'
 
