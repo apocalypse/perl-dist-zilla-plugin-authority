@@ -1,6 +1,6 @@
 package Dist::Zilla::Plugin::Authority;
 
-# ABSTRACT: Add an $AUTHORITY to your packages
+# ABSTRACT: Adds the $AUTHORITY variable and metadata to your distribution
 
 use Moose 1.03;
 use PPI 1.206;
@@ -158,7 +158,7 @@ __PACKAGE__->meta->make_immutable;
 
 =pod
 
-=for :stopwords RJBS metadata FLORA dist ini json username yml
+=for stopwords RJBS metadata FLORA dist ini json username yml
 
 =for Pod::Coverage metadata munge_files
 
