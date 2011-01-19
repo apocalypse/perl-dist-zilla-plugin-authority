@@ -28,7 +28,7 @@ Defaults to the username set in the %PAUSE stash in the global config.ini or dis
 	has authority => (
 		is => 'ro',
 		isa => subtype( 'Str'
-			=> where { $_ =~ /^\w+\:\w+$/ }
+			=> where { $_ =~ /^\w+\:\S+$/ }
 			=> message { "Authority must be in the form of 'cpan:PAUSEID'" }
 		),
 		lazy => 1,
