@@ -2,6 +2,9 @@ Revision history for Dist::Zilla::Plugin::Authority
 
 {{$NEXT}}
 
+1.003
+	Released: 2011-02-04 07:24:46 UTC
+
 	Tweaked the ABSTRACT section ( thanks FLORA + GETTY )
 	Add ability to read from ~/.pause file for the authority ( thanks WOLVERIAN )
 
