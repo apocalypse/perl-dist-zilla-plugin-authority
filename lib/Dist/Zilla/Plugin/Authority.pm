@@ -1,9 +1,11 @@
 package Dist::Zilla::Plugin::Authority;
 
-# ABSTRACT: Adds the $AUTHORITY variable and metadata to your distribution
+# ABSTRACT: Add the $AUTHORITY variable and metadata to your distribution
 
 use Moose 1.03;
 use PPI 1.206;
+use File::Spec;
+use File::HomeDir;
 
 with(
 	'Dist::Zilla::Role::MetaProvider' => { -version => '4.102345' },
@@ -20,6 +22,8 @@ The authority you want to use. It should be something like C<cpan:APOCAL>.
 
 Defaults to the username set in the %PAUSE stash in the global config.ini or dist.ini ( Dist::Zilla v4 addition! )
 
+If you prefer to not put it in config/dist.ini you can put it in "~/.pause" just like Dist::Zilla did before v4.
+
 =cut
 
 {
@@ -35,12 +39,28 @@ Defaults to the username set in the %PAUSE stash in the global config.ini or dis
 		default => sub {
 			my $self = shift;
 			my $stash = $self->zilla->stash_named( '%PAUSE' );
-			if ( ! defined $stash ) {
-				$self->log_fatal( 'PAUSE credentials not set in config.ini/dist.ini! Please set it or specify an authority for this plugin.' );
+			if ( defined $stash ) {
+				$self->log_debug( [ 'using PAUSE id "%s" for AUTHORITY from Dist::Zilla config', uc( $stash->username ) ] );
+				return 'cpan:' . uc( $stash->username );
+			} else {
+				# Argh, try the .pause file?
+				# Code ripped off from Dist::Zilla::Plugin::UploadToCPAN v4.200001 - thanks RJBS!
+				my $file = File::Spec->catfile( File::HomeDir->my_home, '.pause' );
+				if ( -f $file ) {
+					open my $fh, '<', $file or $self->log_fatal( "Unable to open $file - $!" );
+					while (<$fh>) {
+						next if /^\s*(?:#.*)?$/;
+						my ( $k, $v ) = /^\s*(\w+)\s+(.+)$/;
+						if ( $k =~ /^user$/i ) {
+							$self->log_debug( [ 'using PAUSE id "%s" for AUTHORITY from ~/.pause', uc( $v ) ] );
+							return 'cpan:' . uc( $v );
+						}
+					}
+					$self->log_fatal( 'PAUSE user not found in ~/.pause' );
+				} else {
+					$self->log_fatal( 'PAUSE credentials not found in "config.ini" or "dist.ini" or "~/.pause"! Please set it or specify an authority for this plugin.' );
+				}
 			}
-
-			$self->log_debug( [ 'using PAUSE id "%s" for AUTHORITY', $stash->username ] );
-			return 'cpan:' . $stash->username;
 		},
 	);
 
