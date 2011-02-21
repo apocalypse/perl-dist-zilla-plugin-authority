@@ -32,7 +32,7 @@ If you prefer to not put it in config/dist.ini you can put it in "~/.pause" just
 	has authority => (
 		is => 'ro',
 		isa => subtype( 'Str'
-			=> where { $_ =~ /^\w+\:\w+$/ }
+			=> where { $_ =~ /^\w+\:\S+$/ }
 			=> message { "Authority must be in the form of 'cpan:PAUSEID'" }
 		),
 		lazy => 1,
