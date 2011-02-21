@@ -2,6 +2,11 @@ Revision history for Dist::Zilla::Plugin::Authority
 
 {{$NEXT}}
 
+1.004
+	Released: 2011-02-21 17:55:27 UTC
+
+	Tweak the authority regex to be a bit more liberal ( thanks RWSTAUNER! )
+
 1.003
 	Released: 2011-02-04 07:24:46 UTC
 
