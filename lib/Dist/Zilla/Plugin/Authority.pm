@@ -159,10 +159,10 @@ sub _munge_perl {
 		}
 	}
 
+	# Should we use the comment to insert the $AUTHORITY or the pkg declaration?
 	if ( $self->locate_comment ) {
-		# This variant looks for comments of the form # AUTHORITY and modifies them ( thanks NIGELM for the code! )
 		my $comments = $document->find( 'PPI::Token::Comment' );
-		my $found_authority = 0;
+		my $found_authority;
 		if ( ref $comments and ref( $comments ) eq 'ARRAY' ) {
 			foreach my $line ( @$comments ) {
 				if ( $line =~ /^(\s*)(\#\s+AUTHORITY\b)$/xms ) {
@@ -171,7 +171,7 @@ sub _munge_perl {
 
 					$self->log_debug( [ 'adding $AUTHORITY assignment to line %d in %s', $line->line_number, $file->name ] );
 					$line->set_content( $perl );
-					$found_authority++;
+					$found_authority = 1;
 				}
 			}
 		}
@@ -181,7 +181,6 @@ sub _munge_perl {
 			return;
 		}
 	} else {
-		# this variant injects code after the package statement ( default behavior )
 		return unless my $package_stmts = $document->find( 'PPI::Statement::Package' );
 
 		my %seen_pkgs;
