@@ -1,6 +1,7 @@
 Revision history for Dist::Zilla::Plugin::Authority
 
 {{$NEXT}}
+	Added locate_comment which finds a # AUTHORITY comment and puts authority there
 
 1.004
 	Released: 2011-02-21 17:55:27 UTC

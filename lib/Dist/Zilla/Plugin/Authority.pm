@@ -90,9 +90,26 @@ Defaults to true.
 =cut
 
 has do_munging => (
-	is => 'ro',
-	isa => 'Bool',
-	default => 1,
+    is => 'ro',
+    isa => 'Bool',
+    default => 1,
+);
+
+=attr locate_comment
+
+A boolean value to control if the $AUTHORITY variable should be added where a
+C<# AUTHORITY> comment is found.  If this is set then an appropriate comment
+is found, and C<our $AUTHORITY = 'cpan:PAUSEID';> is inserted preceding the
+comment on the same line.
+
+Defaults to false.
+
+=cut
+
+has locate_comment => (
+    is => 'ro',
+    isa => 'Bool',
+    default => 0,
 );
 
 sub metadata {
@@ -138,35 +155,64 @@ sub _munge_perl {
 		}
 	}
 
-	return unless my $package_stmts = $document->find('PPI::Statement::Package');
+	if ($self->locate_comment) {
+		# This varient looks for comments of the form # AUTHORITY and modifies them
+		my $comments = $document->find('PPI::Token::Comment');
 
-	my %seen_pkgs;
-
-	for my $stmt ( @$package_stmts ) {
-		my $package = $stmt->namespace;
-
-		# Thanks to rafl ( Florian Ragwitz ) for this
-		if ( $seen_pkgs{ $package }++ ) {
-			$self->log( [ 'skipping package re-declaration for %s', $package ] );
-			next;
+		if ( ref($comments) eq 'ARRAY' ) {
+			foreach ( @{ $comments } ) {
+				if ( /^(\s*)(\#\s+AUTHORITY\b)$/xms ) {
+					my ( $ws, $comment ) =  ( $1, $2 );
+					my $code
+							= "$ws"
+							. q{our $AUTHORITY = '}
+							. $self->authority
+							. qq{'; $comment\n}
+							;
+					$_->set_content("$code");
+				}
+			}
 		}
-
-		# Thanks to autarch ( Dave Rolsky ) for this
-		if ( $stmt->content =~ /package\s*(?:#.*)?\n\s*\Q$package/ ) {
-			$self->log([ 'skipping private package %s', $package ]);
-			next;
+		else {
+			my $fn = $file->name;
+			$self->log( "File: $fn"
+				. ' has no comments, consider adding a "# AUTHORITY" commment'
+				);
+			return;
 		}
+	}
+	else {
+		# this varient injects code after the package statement
+		return unless my $package_stmts = $document->find('PPI::Statement::Package');
 
-		# Same \x20 hack as seen in PkgVersion, blarh!
-		my $perl = "BEGIN {\n  \$$package\::AUTHORITY\x20=\x20'" . $self->authority . "';\n}\n";
-		my $doc = PPI::Document->new( \$perl );
-		my @children = $doc->schildren;
+		my %seen_pkgs;
 
-		$self->log_debug( [ 'adding $AUTHORITY assignment to %s in %s', $package, $file->name ] );
+		for my $stmt ( @$package_stmts ) {
+			my $package = $stmt->namespace;
 
-		Carp::carp( "error inserting AUTHORITY in " . $file->name )
-			unless $stmt->insert_after( $children[0]->clone )
-			and    $stmt->insert_after( PPI::Token::Whitespace->new("\n") );
+			# Thanks to rafl ( Florian Ragwitz ) for this
+			if ( $seen_pkgs{ $package }++ ) {
+				$self->log( [ 'skipping package re-declaration for %s', $package ] );
+				next;
+			}
+
+			# Thanks to autarch ( Dave Rolsky ) for this
+			if ( $stmt->content =~ /package\s*(?:#.*)?\n\s*\Q$package/ ) {
+				$self->log([ 'skipping private package %s', $package ]);
+				next;
+			}
+
+			# Same \x20 hack as seen in PkgVersion, blarh!
+			my $perl = "BEGIN {\n  \$$package\::AUTHORITY\x20=\x20'" . $self->authority . "';\n}\n";
+			my $doc = PPI::Document->new( \$perl );
+			my @children = $doc->schildren;
+
+			$self->log_debug( [ 'adding $AUTHORITY assignment to %s in %s', $package, $file->name ] );
+
+			Carp::carp( "error inserting AUTHORITY in " . $file->name )
+				unless $stmt->insert_after( $children[0]->clone )
+				and    $stmt->insert_after( PPI::Token::Whitespace->new("\n") );
+		}
 	}
 
 	$file->content( $document->serialize );
