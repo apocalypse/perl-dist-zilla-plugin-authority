@@ -56,6 +56,7 @@ If you prefer to not put it in config/dist.ini you can put it in "~/.pause" just
 							return 'cpan:' . uc( $v );
 						}
 					}
+					close $fh or $self->log_fatal( "Unable to close $file - $!" );
 					$self->log_fatal( 'PAUSE user not found in ~/.pause' );
 				} else {
 					$self->log_fatal( 'PAUSE credentials not found in "config.ini" or "dist.ini" or "~/.pause"! Please set it or specify an authority for this plugin.' );
@@ -161,17 +162,21 @@ sub _munge_perl {
 	if ( $self->locate_comment ) {
 		# This variant looks for comments of the form # AUTHORITY and modifies them ( thanks NIGELM for the code! )
 		my $comments = $document->find( 'PPI::Token::Comment' );
+		my $found_authority = 0;
 		if ( ref $comments and ref( $comments ) eq 'ARRAY' ) {
 			foreach my $line ( @$comments ) {
 				if ( $line =~ /^(\s*)(\#\s+AUTHORITY\b)$/xms ) {
 					my ( $ws, $comment ) = ( $1, $2 );
 					my $perl = $ws . 'our $AUTHORITY = \'' . $self->authority . "'; $comment\n";
 
-					$self->log_debug( [ 'adding $AUTHORITY assignment in line %d in %s', $file->line_number, $file->name ] );
+					$self->log_debug( [ 'adding $AUTHORITY assignment to line %d in %s', $line->line_number, $file->name ] );
 					$line->set_content( $perl );
+					$found_authority++;
 				}
 			}
-		} else {
+		}
+
+		if ( ! $found_authority ) {
 			$self->log( [ 'skipping %s: consider adding a "# AUTHORITY" comment', $file->name ] );
 			return;
 		}
@@ -197,7 +202,7 @@ sub _munge_perl {
 			}
 
 			# Same \x20 hack as seen in PkgVersion, blarh!
-			my $perl = "BEGIN {\n  \$$package\::AUTHORITY\x20=\x20'" . $self->authority . "';\n}\n";
+			my $perl = "BEGIN {\n  \$${package}::AUTHORITY\x20=\x20'" . $self->authority . "';\n}\n";
 			my $doc = PPI::Document->new( \$perl );
 			my @children = $doc->schildren;
 
