@@ -90,9 +90,9 @@ Defaults to true.
 =cut
 
 has do_munging => (
-    is => 'ro',
-    isa => 'Bool',
-    default => 1,
+	is => 'ro',
+	isa => 'Bool',
+	default => 1,
 );
 
 =attr locate_comment
@@ -102,14 +102,17 @@ C<# AUTHORITY> comment is found.  If this is set then an appropriate comment
 is found, and C<our $AUTHORITY = 'cpan:PAUSEID';> is inserted preceding the
 comment on the same line.
 
+This basically implements what L<OurPkgVersion|Dist::Zilla::Plugin::OurPkgVersion>
+does for L<PkgVersion|Dist::Zilla::Plugin::PkgVersion>.
+
 Defaults to false.
 
 =cut
 
 has locate_comment => (
-    is => 'ro',
-    isa => 'Bool',
-    default => 0,
+	is => 'ro',
+	isa => 'Bool',
+	default => 0,
 );
 
 sub metadata {
@@ -155,35 +158,26 @@ sub _munge_perl {
 		}
 	}
 
-	if ($self->locate_comment) {
-		# This varient looks for comments of the form # AUTHORITY and modifies them
-		my $comments = $document->find('PPI::Token::Comment');
+	if ( $self->locate_comment ) {
+		# This variant looks for comments of the form # AUTHORITY and modifies them ( thanks NIGELM for the code! )
+		my $comments = $document->find( 'PPI::Token::Comment' );
+		if ( ref $comments and ref( $comments ) eq 'ARRAY' ) {
+			foreach my $line ( @$comments ) {
+				if ( $line =~ /^(\s*)(\#\s+AUTHORITY\b)$/xms ) {
+					my ( $ws, $comment ) = ( $1, $2 );
+					my $perl = $ws . 'our $AUTHORITY = \'' . $self->authority . "'; $comment\n";
 
-		if ( ref($comments) eq 'ARRAY' ) {
-			foreach ( @{ $comments } ) {
-				if ( /^(\s*)(\#\s+AUTHORITY\b)$/xms ) {
-					my ( $ws, $comment ) =  ( $1, $2 );
-					my $code
-							= "$ws"
-							. q{our $AUTHORITY = '}
-							. $self->authority
-							. qq{'; $comment\n}
-							;
-					$_->set_content("$code");
+					$self->log_debug( [ 'adding $AUTHORITY assignment in line %d in %s', $file->line_number, $file->name ] );
+					$line->set_content( $perl );
 				}
 			}
-		}
-		else {
-			my $fn = $file->name;
-			$self->log( "File: $fn"
-				. ' has no comments, consider adding a "# AUTHORITY" commment'
-				);
+		} else {
+			$self->log( [ 'skipping %s: consider adding a "# AUTHORITY" comment', $file->name ] );
 			return;
 		}
-	}
-	else {
-		# this varient injects code after the package statement
-		return unless my $package_stmts = $document->find('PPI::Statement::Package');
+	} else {
+		# this variant injects code after the package statement ( default behavior )
+		return unless my $package_stmts = $document->find( 'PPI::Statement::Package' );
 
 		my %seen_pkgs;
 
@@ -198,7 +192,7 @@ sub _munge_perl {
 
 			# Thanks to autarch ( Dave Rolsky ) for this
 			if ( $stmt->content =~ /package\s*(?:#.*)?\n\s*\Q$package/ ) {
-				$self->log([ 'skipping private package %s', $package ]);
+				$self->log( [ 'skipping private package %s', $package ] );
 				next;
 			}
 
