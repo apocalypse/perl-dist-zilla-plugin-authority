@@ -246,10 +246,9 @@ Your metadata ( META.yml or META.json ) will have an entry looking like this:
 	x_authority => 'cpan:APOCAL'
 
 =head1 SEE ALSO
-
-L<Dist::Zilla>
-L<http://www.perlmonks.org/?node_id=694377>
-L<http://perlcabal.org/syn/S11.html#Versioning>
+Dist::Zilla
+http://www.perlmonks.org/?node_id=694377
+http://perlcabal.org/syn/S11.html#Versioning
 
 =head1 ACKNOWLEDGEMENTS
 
