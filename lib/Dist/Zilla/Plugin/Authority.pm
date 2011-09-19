@@ -15,7 +15,7 @@ with(
 		-version => '4.102345',
 		default_finders => [ ':InstallModules', ':ExecFiles' ],
 	},
-    'Dist::Zilla::Role::PPI' => { -version => '4.300001',
+    'Dist::Zilla::Role::PPI' => { -version => '4.300001' },
 );
 
 =attr authority
