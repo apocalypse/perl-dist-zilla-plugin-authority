@@ -6,6 +6,7 @@ use Moose 1.03;
 use PPI 1.206;
 use File::Spec;
 use File::HomeDir;
+use Dist::Zilla::Util;
 
 with(
 	'Dist::Zilla::Role::MetaProvider' => { -version => '4.102345' },
@@ -14,6 +15,7 @@ with(
 		-version => '4.102345',
 		default_finders => [ ':InstallModules', ':ExecFiles' ],
 	},
+    'Dist::Zilla::Role::PPI',
 );
 
 =attr authority
@@ -147,17 +149,12 @@ sub _munge_file {
 sub _munge_perl {
 	my( $self, $file ) = @_;
 
-	my $content = $file->content;
-	my $document = PPI::Document->new( \$content ) or Carp::croak( PPI::Document->errstr );
+    my $document = $self->ppi_document_for_file($file);
 
-	{
-		my $code_only = $document->clone;
-		$code_only->prune( "PPI::Token::$_" ) for qw( Comment Pod Quote Regexp );
-		if ( $code_only->serialize =~ /\$AUTHORITY\s*=/sm ) {
-			$self->log( [ 'skipping %s: assigns to $AUTHORITY', $file->name ] );
-			return;
-		}
-	}
+    if ( $self->document_assigns_to_variable( $document, '$AUTHORITY' ) ) {
+        $self->log( [ 'skipping %s: assigns to $AUTHORITY', $file->name ] );
+        return;
+    }
 
 	# Should we use the comment to insert the $AUTHORITY or the pkg declaration?
 	if ( $self->locate_comment ) {
@@ -213,7 +210,7 @@ sub _munge_perl {
 		}
 	}
 
-	$file->content( $document->serialize );
+    $self->save_ppi_document_to_file( $document, $file );
 }
 
 no Moose;
