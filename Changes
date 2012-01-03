@@ -2,6 +2,8 @@ Revision history for Dist::Zilla::Plugin::Authority
 
 {{$NEXT}}
 
+    Use the new PPI role in Dist::Zilla 4.300001 to make this plugin faster ( thanks DROLSKY )
+
 1.005
 	Released: 2011-04-14 17:05:17 UTC
 
