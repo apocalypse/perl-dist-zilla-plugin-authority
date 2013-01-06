@@ -146,6 +146,53 @@ sub _munge_file {
 	return;
 }
 
+# create an 'our' style assignment string of Perl code
+# ->_template_our_authority({
+#       whitespace => 'some white text preceeding the our',
+#		authority  => 'the author to assign authority to',
+#       comment    => 'original comment string',
+# })
+sub _template_our_authority {
+	my $variable = "AUTHORITY";
+	return sprintf qq[%sour \$%s = '%s'; %s\n], $_[1]->{whitespace}, $variable, $_[1]->{authority}, $_[1]->{comment};
+}
+
+# Replace the content of $line with an AUTHORITY assignment, preceeded by $ws, succeeded by $comment
+sub _replace_authority_comment {
+	my ( $self, $file, $line, $ws, $comment ) = @_ ;
+	$self->log_debug( [ 'adding $AUTHORITY assignment to line %d in %s', $line->line_number, $file->name ] );
+	$line->set_content(
+			$self->_template_our_authority({ whitespace => $ws, authority => $self->authority, comment => $comment })
+	);
+	return;
+}
+
+# Uses # AUTHORITY comments to work out where to put declarations
+sub _munge_perl_authority_comments {
+	my ( $self, $document, $file ) = @_ ;
+
+	my $comments = $document->find('PPI::Token::Comment');
+
+	return unless ref $comments;
+
+	return unless ref $comments eq 'ARRAY';
+
+	my $found_authority = 0;
+
+	foreach my $line ( @$comments ) {
+		next unless $line =~ /^(\s*)(\#\s+AUTHORITY\b)$/xms;
+		$self->_replace_authority_comment( $file, $line, $1, $2 );
+		$found_authority = 1;
+	}
+    if (  not $found_authority ) {
+		$self->log( [ 'skipping %s: consider adding a "# AUTHORITY" comment', $file->name ] );
+		return;
+	}
+
+	$self->save_ppi_document_to_file( $document, $file );
+	return 1;
+}
+
 sub _munge_perl {
 	my( $self, $file ) = @_;
 
@@ -158,25 +205,7 @@ sub _munge_perl {
 
 	# Should we use the comment to insert the $AUTHORITY or the pkg declaration?
 	if ( $self->locate_comment ) {
-		my $comments = $document->find( 'PPI::Token::Comment' );
-		my $found_authority;
-		if ( ref $comments and ref( $comments ) eq 'ARRAY' ) {
-			foreach my $line ( @$comments ) {
-				if ( $line =~ /^(\s*)(\#\s+AUTHORITY\b)$/xms ) {
-					my ( $ws, $comment ) = ( $1, $2 );
-					my $perl = $ws . 'our $AUTHORITY = \'' . $self->authority . "'; $comment\n";
-
-					$self->log_debug( [ 'adding $AUTHORITY assignment to line %d in %s', $line->line_number, $file->name ] );
-					$line->set_content( $perl );
-					$found_authority = 1;
-				}
-			}
-		}
-
-		if ( ! $found_authority ) {
-			$self->log( [ 'skipping %s: consider adding a "# AUTHORITY" comment', $file->name ] );
-			return;
-		}
+		return  $self->_munge_perl_authority_comments($document, $file);
 	} else {
 		return unless my $package_stmts = $document->find( 'PPI::Statement::Package' );
 
