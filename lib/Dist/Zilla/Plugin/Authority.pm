@@ -176,6 +176,17 @@ sub _make_pkg_authority {
 	return $children[0]->clone;
 }
 
+# Insert an AUTHORITY assignment inside a <package $package { }> declaration( $block )
+sub _inject_pkg_block_authority {
+	my ( $self, $file, $block, $package ) = @_ ;
+	$self->log_debug( [ 'Inserting inside a package NAME BLOCK statement' ] );
+	unshift $block->{children},
+		PPI::Token::Whitespace->new("\n"),
+		$self->_make_pkg_authority( $package ),
+		PPI::Token::Whitespace->new("\n");
+	return;
+}
+
 # Insert an AUTHORITY assignment immediately after the <package $package> declaration ( $stmt )
 sub _inject_pkg_plain_authority {
 	my ( $self, $file, $stmt, $package ) = @_ ;
@@ -246,6 +257,10 @@ sub _munge_perl_packages {
 		}
 		$self->log_debug( [ 'adding $AUTHORITY assignment to %s in %s', $package, $file->name ] );
 
+		if( my $block = $stmt->find_first('PPI::Structure::Block') ) {
+			$self->_inject_pkg_block_authority( $file, $block, $package );
+			next;
+		}
 		$self->_inject_pkg_plain_authority( $file, $stmt, $package );
 		next;
 	}
