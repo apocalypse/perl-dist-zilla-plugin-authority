@@ -198,7 +198,7 @@ sub _munge_perl {
 			}
 
 			# Same \x20 hack as seen in PkgVersion, blarh!
-			my $perl = "BEGIN {\n  \$${package}::AUTHORITY\x20=\x20'" . $self->authority . "';\n}\n";
+			my $perl = 'our $AUTHORITY = \'' . $self->authority . "\;\n";
 			my $doc = PPI::Document->new( \$perl );
 			my @children = $doc->schildren;
 
@@ -234,9 +234,7 @@ attribute.
 
 This code will be added to any package declarations in your perl files:
 
-	BEGIN {
-	  $Dist::Zilla::Plugin::Authority::AUTHORITY = 'cpan:APOCAL';
-	}
+        our $AUTHORITY = 'cpan:APOCAL';
 
 Your metadata ( META.yml or META.json ) will have an entry looking like this:
 

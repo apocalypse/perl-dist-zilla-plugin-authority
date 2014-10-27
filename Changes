@@ -1,6 +1,8 @@
 Revision history for Dist::Zilla::Plugin::Authority
 
 {{$NEXT}}
+        Generate code with 'our' in all cases, rather than the fully-qualified
+        package variable name (ETHER)
 
 1.006	2012-01-03 04:14:27 UTC
 
