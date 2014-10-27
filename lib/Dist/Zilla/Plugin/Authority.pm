@@ -110,6 +110,8 @@ does for L<PkgVersion|Dist::Zilla::Plugin::PkgVersion>.
 
 Defaults to false.
 
+NOTE: If you use this method, then we will not use the pkg style of declaration! That way, we keep the line numbering consistent.
+
 =cut
 
 has locate_comment => (
@@ -117,6 +119,34 @@ has locate_comment => (
 	isa => 'Bool',
 	default => 0,
 );
+
+=attr authority_style
+
+A value to control the type of the $AUTHORITY declaration. There are two styles: 'pkg' or 'our'. In the past
+this module defaulted to the 'pkg' style but due to various issues 'our' is now the default. Here's what both styles
+would look like in the resulting code:
+
+	# pkg
+	BEGIN {
+		$Dist::Zilla::Plugin::Authority::AUTHORITY = 'cpan:APOCAL';
+	}
+
+	# our
+	our $AUTHORITY = 'cpan:APOCAL';
+
+=cut
+
+{
+	use Moose::Util::TypeConstraints 1.01;
+
+	has authority_style => (
+		is => 'ro',
+		isa => enum( [ qw( pkg our ) ] ),
+		default => 'our',
+	);
+
+	no Moose::Util::TypeConstraints;
+}
 
 sub metadata {
 	my( $self ) = @_;
@@ -167,35 +197,41 @@ sub _template_pkg_authority {
 	return sprintf qq[BEGIN {\n  \$%s = '%s';\n}\n], $variable, $_[1]->{authority};
 }
 
-# Generate a PPI Element containing a pkg AUTHORITY assignment for $package
-sub _make_pkg_authority {
+# Generate a PPI element containing our assignment
+sub _make_authority {
 	my ( $self, $package ) = @_;
-	my $perl = $self->_template_pkg_authority({ package => $package, authority => $self->authority });
-	my $doc = PPI::Document->new( \$perl );
+
+	my $code_hunk;
+	if ( $self->authority_style eq 'our' ) {
+		$code_hunk = $self->_template_our_authority({ whitespace => '', authority => $self->authority, comment => '' });
+	} else {
+		$code_hunk = $self->_template_pkg_authority({ package => $package, authority => $self->authority });
+	}
+
+	my $doc = PPI::Document->new( \$code_hunk );
 	my @children = $doc->schildren;
 	return $children[0]->clone;
 }
 
 # Insert an AUTHORITY assignment inside a <package $package { }> declaration( $block )
-sub _inject_pkg_block_authority {
-	my ( $self, $file, $block, $package ) = @_ ;
+sub _inject_block_authority {
+	my ( $self, $block, $package ) = @_ ;
 	$self->log_debug( [ 'Inserting inside a package NAME BLOCK statement' ] );
 	unshift $block->{children},
 		PPI::Token::Whitespace->new("\n"),
-		$self->_make_pkg_authority( $package ),
+		$self->_make_authority( $package ),
 		PPI::Token::Whitespace->new("\n");
 	return;
 }
 
 # Insert an AUTHORITY assignment immediately after the <package $package> declaration ( $stmt )
-sub _inject_pkg_plain_authority {
+sub _inject_plain_authority {
 	my ( $self, $file, $stmt, $package ) = @_ ;
 	$self->log_debug( [ 'Inserting after a plain package declaration' ] );
 	Carp::carp( "error inserting AUTHORITY in " . $file->name )
-		unless $stmt->insert_after( $self->_make_pkg_authority($package) )
+		unless $stmt->insert_after( $self->_make_authority($package) )
 		and    $stmt->insert_after( PPI::Token::Whitespace->new("\n") );
 }
-
 
 # Replace the content of $line with an AUTHORITY assignment, preceeded by $ws, succeeded by $comment
 sub _replace_authority_comment {
@@ -248,7 +284,7 @@ sub _munge_perl_packages {
 		if ( $seen_pkgs{ $package }++ ) {
 			$self->log( [ 'skipping package re-declaration for %s', $package ] );
 			next;
-		};
+		}
 
 		# Thanks to autarch ( Dave Rolsky ) for this
 		if ( $stmt->content =~ /package\s*(?:#.*)?\n\s*\Q$package/ ) {
@@ -258,16 +294,14 @@ sub _munge_perl_packages {
 		$self->log_debug( [ 'adding $AUTHORITY assignment to %s in %s', $package, $file->name ] );
 
 		if( my $block = $stmt->find_first('PPI::Structure::Block') ) {
-			$self->_inject_pkg_block_authority( $file, $block, $package );
+			$self->_inject_block_authority( $block, $package );
 			next;
 		}
-		$self->_inject_pkg_plain_authority( $file, $stmt, $package );
+		$self->_inject_plain_authority( $file, $stmt, $package );
 		next;
 	}
-    $self->save_ppi_document_to_file( $document, $file );
-
+	$self->save_ppi_document_to_file( $document, $file );
 }
-
 
 sub _munge_perl {
 	my( $self, $file ) = @_;
@@ -286,10 +320,6 @@ sub _munge_perl {
 		return $self->_munge_perl_packages( $document, $file );
 	}
 }
-
-
-
-
 
 no Moose;
 __PACKAGE__->meta->make_immutable;
@@ -312,9 +342,7 @@ attribute.
 
 This code will be added to any package declarations in your perl files:
 
-	BEGIN {
-	  $Dist::Zilla::Plugin::Authority::AUTHORITY = 'cpan:APOCAL';
-	}
+	our $AUTHORITY = 'cpan:APOCAL';
 
 Your metadata ( META.yml or META.json ) will have an entry looking like this:
 
