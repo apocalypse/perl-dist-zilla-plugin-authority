@@ -2,6 +2,8 @@ Revision history for Dist::Zilla::Plugin::Authority
 
 {{$NEXT}}
 
+	Made sure that we cannot be loaded with different authorities via RT#86710 ( thanks ETHER! )
+
 1.007	2014-10-27 20:42:01 UTC
 
 	Rewrote how we assign the $AUTHORITY variable to use 'our' instead of the crufty pkg declaration format via gh-5 and gh-6 and RT#86611 ( thanks KENTNL + ETHER )

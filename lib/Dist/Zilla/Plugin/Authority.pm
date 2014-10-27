@@ -148,10 +148,21 @@ would look like in the resulting code:
 	no Moose::Util::TypeConstraints;
 }
 
+# sanity check ourselves...
+my $seen_author;
+
 sub metadata {
 	my( $self ) = @_;
 
 	return if ! $self->do_metadata;
+
+	if ( ! defined $seen_author ) {
+		$seen_author = $self->authority;
+	} else {
+		if ( $seen_author ne $self->authority ) {
+			die "Specifying multiple authorities will not work! We got '$seen_author' and '" . $self->authority . "'";
+		}
+	}
 
 	$self->log_debug( 'adding AUTHORITY to metadata' );
 
@@ -164,6 +175,14 @@ sub munge_files {
 	my( $self ) = @_;
 
 	return if ! $self->do_munging;
+
+	if ( ! defined $seen_author ) {
+		$seen_author = $self->authority;
+	} else {
+		if ( $seen_author ne $self->authority ) {
+			die "Specifying multiple authorities will not work! We got '$seen_author' and '" . $self->authority . "'";
+		}
+	}
 
 	$self->_munge_file( $_ ) for @{ $self->found_files };
 }
