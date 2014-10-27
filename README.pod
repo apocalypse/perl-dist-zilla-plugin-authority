@@ -14,7 +14,7 @@ Dist::Zilla::Plugin::Authority - Add the $AUTHORITY variable and metadata to you
 
 =head1 VERSION
 
-  This document describes v1.007 of Dist::Zilla::Plugin::Authority - released October 27, 2014 as part of Dist-Zilla-Plugin-Authority.
+  This document describes v1.008 of Dist::Zilla::Plugin::Authority - released October 27, 2014 as part of Dist-Zilla-Plugin-Authority.
 
 =head1 DESCRIPTION
 

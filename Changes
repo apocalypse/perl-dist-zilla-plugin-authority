@@ -2,6 +2,8 @@ Revision history for Dist::Zilla::Plugin::Authority
 
 {{$NEXT}}
 
+1.008	2014-10-27 21:33:09 UTC
+
 	Made sure that we cannot be loaded with different authorities via RT#86710 ( thanks ETHER! )
 
 1.007	2014-10-27 20:42:01 UTC
