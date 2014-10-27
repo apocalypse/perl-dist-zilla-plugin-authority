@@ -146,6 +146,129 @@ sub _munge_file {
 	return;
 }
 
+# create an 'our' style assignment string of Perl code
+# ->_template_our_authority({
+#       whitespace => 'some white text preceeding the our',
+#		authority  => 'the author to assign authority to',
+#       comment    => 'original comment string',
+# })
+sub _template_our_authority {
+	my $variable = "AUTHORITY";
+	return sprintf qq[%sour \$%s = '%s'; %s\n], $_[1]->{whitespace}, $variable, $_[1]->{authority}, $_[1]->{comment};
+}
+
+# create a 'pkg' style assignment string of Perl code
+# ->_template_pkg_authority({
+#		package => 'the package the variable is to be created in',
+#       authority => 'the author to assign authority to',
+# })
+sub _template_pkg_authority {
+	my $variable = sprintf "%s::AUTHORITY", $_[1]->{package};
+	return sprintf qq[BEGIN {\n  \$%s = '%s';\n}\n], $variable, $_[1]->{authority};
+}
+
+# Generate a PPI Element containing a pkg AUTHORITY assignment for $package
+sub _make_pkg_authority {
+	my ( $self, $package ) = @_;
+	my $perl = $self->_template_pkg_authority({ package => $package, authority => $self->authority });
+	my $doc = PPI::Document->new( \$perl );
+	my @children = $doc->schildren;
+	return $children[0]->clone;
+}
+
+# Insert an AUTHORITY assignment inside a <package $package { }> declaration( $block )
+sub _inject_pkg_block_authority {
+	my ( $self, $file, $block, $package ) = @_ ;
+	$self->log_debug( [ 'Inserting inside a package NAME BLOCK statement' ] );
+	unshift $block->{children},
+		PPI::Token::Whitespace->new("\n"),
+		$self->_make_pkg_authority( $package ),
+		PPI::Token::Whitespace->new("\n");
+	return;
+}
+
+# Insert an AUTHORITY assignment immediately after the <package $package> declaration ( $stmt )
+sub _inject_pkg_plain_authority {
+	my ( $self, $file, $stmt, $package ) = @_ ;
+	$self->log_debug( [ 'Inserting after a plain package declaration' ] );
+	Carp::carp( "error inserting AUTHORITY in " . $file->name )
+		unless $stmt->insert_after( $self->_make_pkg_authority($package) )
+		and    $stmt->insert_after( PPI::Token::Whitespace->new("\n") );
+}
+
+
+# Replace the content of $line with an AUTHORITY assignment, preceeded by $ws, succeeded by $comment
+sub _replace_authority_comment {
+	my ( $self, $file, $line, $ws, $comment ) = @_ ;
+	$self->log_debug( [ 'adding $AUTHORITY assignment to line %d in %s', $line->line_number, $file->name ] );
+	$line->set_content(
+			$self->_template_our_authority({ whitespace => $ws, authority => $self->authority, comment => $comment })
+	);
+	return;
+}
+
+# Uses # AUTHORITY comments to work out where to put declarations
+sub _munge_perl_authority_comments {
+	my ( $self, $document, $file ) = @_ ;
+
+	my $comments = $document->find('PPI::Token::Comment');
+
+	return unless ref $comments;
+
+	return unless ref $comments eq 'ARRAY';
+
+	my $found_authority = 0;
+
+	foreach my $line ( @$comments ) {
+		next unless $line =~ /^(\s*)(\#\s+AUTHORITY\b)$/xms;
+		$self->_replace_authority_comment( $file, $line, $1, $2 );
+		$found_authority = 1;
+	}
+    if (  not $found_authority ) {
+		$self->log( [ 'skipping %s: consider adding a "# AUTHORITY" comment', $file->name ] );
+		return;
+	}
+
+	$self->save_ppi_document_to_file( $document, $file );
+	return 1;
+}
+
+# Places Fully Qualified $AUTHORITY values in packages
+sub _munge_perl_packages {
+	my ( $self, $document, $file ) = @_ ;
+
+	return unless my $package_stmts = $document->find( 'PPI::Statement::Package' );
+
+	my %seen_pkgs;
+
+	for my $stmt ( @$package_stmts ) {
+		my $package = $stmt->namespace;
+
+		# Thanks to rafl ( Florian Ragwitz ) for this
+		if ( $seen_pkgs{ $package }++ ) {
+			$self->log( [ 'skipping package re-declaration for %s', $package ] );
+			next;
+		};
+
+		# Thanks to autarch ( Dave Rolsky ) for this
+		if ( $stmt->content =~ /package\s*(?:#.*)?\n\s*\Q$package/ ) {
+			$self->log( [ 'skipping private package %s', $package ] );
+			next;
+		}
+		$self->log_debug( [ 'adding $AUTHORITY assignment to %s in %s', $package, $file->name ] );
+
+		if( my $block = $stmt->find_first('PPI::Structure::Block') ) {
+			$self->_inject_pkg_block_authority( $file, $block, $package );
+			next;
+		}
+		$self->_inject_pkg_plain_authority( $file, $stmt, $package );
+		next;
+	}
+    $self->save_ppi_document_to_file( $document, $file );
+
+}
+
+
 sub _munge_perl {
 	my( $self, $file ) = @_;
 
@@ -158,60 +281,15 @@ sub _munge_perl {
 
 	# Should we use the comment to insert the $AUTHORITY or the pkg declaration?
 	if ( $self->locate_comment ) {
-		my $comments = $document->find( 'PPI::Token::Comment' );
-		my $found_authority;
-		if ( ref $comments and ref( $comments ) eq 'ARRAY' ) {
-			foreach my $line ( @$comments ) {
-				if ( $line =~ /^(\s*)(\#\s+AUTHORITY\b)$/xms ) {
-					my ( $ws, $comment ) = ( $1, $2 );
-					my $perl = $ws . 'our $AUTHORITY = \'' . $self->authority . "'; $comment\n";
-
-					$self->log_debug( [ 'adding $AUTHORITY assignment to line %d in %s', $line->line_number, $file->name ] );
-					$line->set_content( $perl );
-					$found_authority = 1;
-				}
-			}
-		}
-
-		if ( ! $found_authority ) {
-			$self->log( [ 'skipping %s: consider adding a "# AUTHORITY" comment', $file->name ] );
-			return;
-		}
+		return  $self->_munge_perl_authority_comments($document, $file);
 	} else {
-		return unless my $package_stmts = $document->find( 'PPI::Statement::Package' );
-
-		my %seen_pkgs;
-
-		for my $stmt ( @$package_stmts ) {
-			my $package = $stmt->namespace;
-
-			# Thanks to rafl ( Florian Ragwitz ) for this
-			if ( $seen_pkgs{ $package }++ ) {
-				$self->log( [ 'skipping package re-declaration for %s', $package ] );
-				next;
-			}
-
-			# Thanks to autarch ( Dave Rolsky ) for this
-			if ( $stmt->content =~ /package\s*(?:#.*)?\n\s*\Q$package/ ) {
-				$self->log( [ 'skipping private package %s', $package ] );
-				next;
-			}
-
-			# Same \x20 hack as seen in PkgVersion, blarh!
-			my $perl = "BEGIN {\n  \$${package}::AUTHORITY\x20=\x20'" . $self->authority . "';\n}\n";
-			my $doc = PPI::Document->new( \$perl );
-			my @children = $doc->schildren;
-
-			$self->log_debug( [ 'adding $AUTHORITY assignment to %s in %s', $package, $file->name ] );
-
-			Carp::carp( "error inserting AUTHORITY in " . $file->name )
-				unless $stmt->insert_after( $children[0]->clone )
-				and    $stmt->insert_after( PPI::Token::Whitespace->new("\n") );
-		}
+		return $self->_munge_perl_packages( $document, $file );
 	}
-
-    $self->save_ppi_document_to_file( $document, $file );
 }
+
+
+
+
 
 no Moose;
 __PACKAGE__->meta->make_immutable;
