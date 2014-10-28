@@ -236,7 +236,11 @@ sub _make_authority {
 sub _inject_block_authority {
 	my ( $self, $block, $package ) = @_ ;
 	$self->log_debug( [ 'Inserting inside a package NAME BLOCK statement' ] );
-	unshift $block->{children},
+
+	# TODO watch https://github.com/neilbowers/Perl-MinimumVersion/issues/1
+	# because Perl::MinimumVersion didn't specify 5.14 we got: http://www.cpantesters.org/cpan/report/ffab485c-5e2a-11e4-846d-e015e1bfc7aa
+	# and tons of FAIL on perls < 5.14 :(
+	unshift @{ $block->{children} },
 		PPI::Token::Whitespace->new("\n"),
 		$self->_make_authority( $package ),
 		PPI::Token::Whitespace->new("\n");
