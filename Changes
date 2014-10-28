@@ -2,6 +2,8 @@ Revision history for Dist::Zilla::Plugin::Authority
 
 {{$NEXT}}
 
+1.009	2014-10-28 03:40:27 UTC
+
 	Fix code style which caused perls < 5.14 to blow up - unshift ARRAYREF ( thanks CPANTESTERS! )
 
 1.008	2014-10-27 21:33:09 UTC
